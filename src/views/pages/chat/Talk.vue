@@ -1,70 +1,67 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import socketIO from '@/utils/socket'
+
 const props = defineProps({
-  friend: Object,
+  currentUser: Object,
   bgColor: String
 })
-const emit = defineEmits(['lastMessage'])
+
 // 消息输入框的内容
 const messageInput = ref('')
 // 获取消息容器的引用
 const messagesContainer = ref(null)
 
-// 模拟聊天记录数据
-const chatHistories = ref({
-  1: [
-    { id: 1, type: 'friend', content: '你好啊！', time: '14:20' },
-    { id: 2, type: 'me', content: '你好！最近怎么样？', time: '14:21' },
-    { id: 3, type: 'friend', content: '还不错，在学Vue', time: '14:22' }
-  ],
-  2: [
-    { id: 1, type: 'friend', content: '明天见！', time: '昨天' },
-    { id: 2, type: 'me', content: '好的，明天见！', time: '昨天' }
-  ]
-})
+// 聊天消息列表
+const messages = ref([])
 
-// 获取当前好友的聊天记录
-const getCurrentChatHistory = () => {
-  return props.friend ? chatHistories.value[props.friend.id] : []
-}
+// 监听新消息
+onMounted(() => {
+  socketIO.onChatMessage((message) => {
+    messages.value.push({
+      id: message.timestamp,
+      type: message.sender.id === props.currentUser.id ? 'me' : 'other',
+      content: message.content,
+      sender: message.sender,
+      time: new Date(message.timestamp).toLocaleTimeString()
+    })
+    scrollToBottom()
+  })
+
+  // 监听系统消息
+  socketIO.onSystemMessage((message) => {
+    messages.value.push({
+      id: message.timestamp,
+      type: 'system',
+      content: message.content,
+      time: new Date(message.timestamp).toLocaleTimeString()
+    })
+    scrollToBottom()
+  })
+})
 
 // 滚动到底部
 const scrollToBottom = () => {
-  nextTick(() => messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight)
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
 }
 
 // 发送消息
 const sendMessage = () => {
   if (!messageInput.value.trim()) 
-  return ElMessage.error('消息不能为空')// 如果消息为空，不发送
+    return ElMessage.error('消息不能为空')
   
-  const currentTime = new Date()
-  const timeStr = `${currentTime.getHours()}:${currentTime.getMinutes().toString().padStart(2, '0')}`
-  
-  // 创建新消息
-  const newMessage = {
-    id: Date.now(), // 使用时间戳作为临时ID
-    type: 'me',
-    content: messageInput.value,
-    time: timeStr
-  }
-  
-  // 将新消息添加到聊天记录中
-  chatHistories.value[props.friend.id].push(newMessage)
-  
-  // 将最新消息传递给父组件
-  emit('lastMessage', {
-    content: messageInput.value,
-    time: timeStr
-  })
+  // 通过WebSocket发送消息
+  socketIO.sendMessage(messageInput.value)
   
   // 清空输入框
   messageInput.value = ''
-  
-  // 滚动到底部
-  scrollToBottom()
 }
+
 // 处理回车发送
 const handleKeyPress = (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -77,22 +74,38 @@ const handleKeyPress = (e) => {
 <template>
   <div class="talk-container">
     <div class="chat-header">
-      <div class="friend-info">
-        <img :src="friend?.avatar" :alt="friend?.name">
-        <span class="friend-name" :style="{ color: bgColor === 'white' ? 'rgb(39, 42, 55)' : '#fff' }">{{ friend?.name }}</span>
+      <div class="room-info">
+        <h3 :style="{ color: bgColor === 'white' ? 'rgb(39, 42, 55)' : '#fff' }">聊天室</h3>
       </div>
     </div>
     <div class="messages-container" ref="messagesContainer">
       <div 
-        v-for="msg in getCurrentChatHistory()" 
+        v-for="msg in messages" 
         :key="msg.id"
         class="message"
-        :class="{ 'message-mine': msg.type === 'me' }"
+        :class="{ 
+          'message-mine': msg.type === 'me',
+          'message-system': msg.type === 'system'
+        }"
       >
-        <div class="message-content">
-          <div class="message-text" :style="msg.type === 'me' ? {} : { backgroundColor: bgColor === 'white' ? 'rgba(39, 42, 55, 0.1)' : 'rgba(255, 255, 255, 0.1)', color: bgColor === 'white' ? 'rgb(39, 42, 55)' : '#fff' }">{{ msg.content }}</div>
-          <div class="message-time" :style="{ color: bgColor === 'white' ? 'rgba(39, 42, 55, 0.4)' : 'rgba(255, 255, 255, 0.4)' }">{{ msg.time }}</div>
-        </div>
+        <template v-if="msg.type === 'system'">
+          <div class="system-message" :style="{ color: bgColor === 'white' ? 'rgba(39, 42, 55, 0.6)' : 'rgba(255, 255, 255, 0.6)' }">
+            {{ msg.content }}
+          </div>
+        </template>
+        <template v-else>
+          <div class="message-content">
+            <div class="message-sender" v-if="msg.type === 'other'" :style="{ color: bgColor === 'white' ? 'rgba(39, 42, 55, 0.6)' : 'rgba(255, 255, 255, 0.6)' }">
+              {{ msg.sender.name }}
+            </div>
+            <div class="message-text" :style="msg.type === 'me' ? {} : { backgroundColor: bgColor === 'white' ? 'rgba(39, 42, 55, 0.1)' : 'rgba(255, 255, 255, 0.1)', color: bgColor === 'white' ? 'rgb(39, 42, 55)' : '#fff' }">
+              {{ msg.content }}
+            </div>
+            <div class="message-time" :style="{ color: bgColor === 'white' ? 'rgba(39, 42, 55, 0.4)' : 'rgba(255, 255, 255, 0.4)' }">
+              {{ msg.time }}
+            </div>
+          </div>
+        </template>
       </div>
     </div>
     <div class="input-area">
@@ -125,16 +138,13 @@ const handleKeyPress = (e) => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.friend-info {
-  display: flex;
-  align-items: center;
+.room-info {
+  text-align: center;
 }
 
-.friend-info img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 10px;
+.room-info h3 {
+  margin: 0;
+  font-size: 18px;
 }
 
 .messages-container {
@@ -151,8 +161,25 @@ const handleKeyPress = (e) => {
 .message-mine {
   justify-content: flex-end;
 }
+
+.message-system {
+  justify-content: center;
+}
+
+.system-message {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 5px 15px;
+  border-radius: 15px;
+  font-size: 12px;
+}
+
 .message-content {
   max-width: 70%;
+}
+
+.message-sender {
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
 .message-text {
@@ -160,6 +187,7 @@ const handleKeyPress = (e) => {
   padding: 12px 16px;
   border-radius: 15px;
   color: #fff;
+  word-break: break-all;
 }
 
 .message-mine .message-text {
@@ -208,23 +236,23 @@ const handleKeyPress = (e) => {
 .send-btn:hover {
   background: rgb(24, 119, 204);
 }
-/* 添加滚动条样式 */
-/* -webkit浏览器自带的滚动条样式 */
+
+/* 滚动条样式 */
 .messages-container::-webkit-scrollbar {
-  width: 5px;  /* 滚动条宽度 */
+  width: 5px;
 }
 
 .messages-container::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);  /* 滚动条轨道背景色 */
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 5px;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: rgb(29, 144, 245);  /* 滚动条颜色，使用与发送按钮相同的蓝色 */
+  background: rgb(29, 144, 245);
   border-radius: 5px;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-  background: rgb(24, 119, 204);  /* 鼠标悬停时的颜色 */
+  background: rgb(24, 119, 204);
 }
 </style>

@@ -2,16 +2,17 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import defaultImg from '@/assets/img/Me.jpg'
+import socketIO from '@/utils/socket'
 
 const userName = ref('')
 const avatarUrl = ref(defaultImg)
-const Theme =ref('black')
-const emit=defineEmits(['updateTheme', 'updateAvatar'])
+const Theme = ref('black')
+const emit = defineEmits(['updateTheme', 'updateAvatar'])
 const titleColor = ref('white')
-const props=defineProps({
-    bgColor:String
+const props = defineProps({
+    bgColor: String
 })
-const bgColor=props.bgColor
+const bgColor = props.bgColor
 
 // 处理头像上传
 const handleAvatarChange = (file) => {
@@ -24,18 +25,22 @@ const handleAvatarChange = (file) => {
 
 const saveSettings = () => {
   ElMessage.success('设置保存成功！')
-  emit('updateTheme',Theme.value)
+  emit('updateTheme', Theme.value)
+  
+  // 更新头像并通知其他用户
   emit('updateAvatar', avatarUrl.value)
-  titleColor.value=Theme.value==='black' ? 'white' : 'rgb(39, 42, 55)'
+  socketIO.updateAvatar(avatarUrl.value)
+  
+  titleColor.value = Theme.value === 'black' ? 'white' : 'rgb(39, 42, 55)'
 }
 
-onMounted(()=>{
-    if(bgColor===titleColor.value){
-        titleColor.value='black'
-        Theme.value='white'
-    }else{
-        titleColor.value='white'
-        Theme.value='black'
+onMounted(() => {
+    if(bgColor === titleColor.value) {
+        titleColor.value = 'black'
+        Theme.value = 'white'
+    } else {
+        titleColor.value = 'white'
+        Theme.value = 'black'
     }
 })
 </script>

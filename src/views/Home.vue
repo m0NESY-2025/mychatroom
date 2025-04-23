@@ -33,6 +33,7 @@ const updateAvatar = (newAvatarUrl) => {
           @updateTheme="updateTheme" 
           @updateAvatar="updateAvatar"
           :bgColor="Theme"
+          :avatarUrl="avatarUrl"
         />
       </el-main>
     </el-container>
