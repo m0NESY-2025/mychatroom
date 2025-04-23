@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
 import Nav from '../components/Nav.vue'
-import Setting from '../views/pages/Setting.vue'
-import Chat from '../views/pages/Chat.vue'
+import defaultImg from '@/assets/img/Me.jpg'
+
 const Theme = ref('black') // 初始化默认值
+const avatarUrl = ref(defaultImg) // 添加头像状态
+
 const updateTheme = (NewValue) => {
   Theme.value = NewValue
   if(Theme.value==='black'){
@@ -13,16 +15,25 @@ const updateTheme = (NewValue) => {
   document.querySelector('.home').style.backgroundColor='#f7f7f7'
   }
 }
+
+// 处理头像更新
+const updateAvatar = (newAvatarUrl) => {
+  avatarUrl.value = newAvatarUrl
+}
 </script>
 
 <template>
   <div class="home" >
     <el-container>
       <el-aside width="100px">
-        <Nav/>
+        <Nav :avatarUrl="avatarUrl"/>
       </el-aside>
       <el-main>
-        <router-view  @updateTheme="updateTheme" :bgColor="Theme"/>
+        <router-view  
+          @updateTheme="updateTheme" 
+          @updateAvatar="updateAvatar"
+          :bgColor="Theme"
+        />
       </el-main>
     </el-container>
   </div>

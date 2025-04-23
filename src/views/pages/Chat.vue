@@ -50,6 +50,16 @@ const selectFriend = (friendId) => {
 const getCurrentFriend = () => {
   return friendsList.value.find(friend => friend.id === currentFriendId.value)
 }
+
+// 处理最后一条消息更新
+const handleLastMessage = (message) => {
+    friendsList.value.forEach(friend=>{
+      if(friend.id===currentFriendId.value){
+        friend.lastMessage=message.content
+        friend.lastTime=message.time
+      }
+    })
+}
 </script>
 
 <template>
@@ -87,6 +97,7 @@ const getCurrentFriend = () => {
           v-if="currentFriendId"
           :friend="getCurrentFriend()"
           :bgColor="props.bgColor"
+          @lastMessage="handleLastMessage"
         />
         <div v-else class="empty-chat">
           <div class="empty-content">

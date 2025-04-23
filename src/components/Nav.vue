@@ -4,11 +4,14 @@ import HeadPortrait from './HeadPortrait.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import '@/assets/font/iconfont.css' 
-import HeadImg from '@/assets/img/Me.jpg'
+
 const router = useRouter()
 const current = ref(0)
 const menuList = ref(["icon-xinxi", "icon-shezhi"])
-const imgUrl=ref(HeadImg)
+const props = defineProps({
+  avatarUrl: String
+})
+
 const changeMenu = (index) => {
   switch (index) {
     case 0:
@@ -38,7 +41,7 @@ const changeMenu = (index) => {
       </ul>
     </div>
     <div class="own-pic">
-        <HeadPortrait :imgUrl="imgUrl"></HeadPortrait>
+        <HeadPortrait :imgUrl="avatarUrl"></HeadPortrait>
     </div>
   </div>
 </template>

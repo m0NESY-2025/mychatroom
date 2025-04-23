@@ -6,20 +6,29 @@ import defaultImg from '@/assets/img/Me.jpg'
 const userName = ref('')
 const avatarUrl = ref(defaultImg)
 const Theme =ref('black')
-const emit=defineEmits(['updateTheme'])
+const emit=defineEmits(['updateTheme', 'updateAvatar'])
 const titleColor = ref('white')
 const props=defineProps({
     bgColor:String
 })
 const bgColor=props.bgColor
 
+// 处理头像上传
+const handleAvatarChange = (file) => {
+  const reader = new FileReader()
+  reader.readAsDataURL(file.raw)
+  reader.onload = (e) => {
+    avatarUrl.value = e.target.result
+  }
+}
+
 const saveSettings = () => {
   ElMessage.success('设置保存成功！')
-  // 这里添加实际保存逻辑
   emit('updateTheme',Theme.value)
-  //修改标题颜色
+  emit('updateAvatar', avatarUrl.value)
   titleColor.value=Theme.value==='black' ? 'white' : 'rgb(39, 42, 55)'
 }
+
 onMounted(()=>{
     if(bgColor===titleColor.value){
         titleColor.value='black'
@@ -28,17 +37,15 @@ onMounted(()=>{
         titleColor.value='white'
         Theme.value='black'
     }
-    
 })
 </script>
 
 <template>
   <div class="setting-container">
-    <h1 class="setting-title" :style="{color:titleColor}">信息修改</h1>
+    <h1 class="setting-title" :style="{color:titleColor}">设置</h1>
     
     <div class="setting-content">
       <el-form>
-
         <!-- 主题切换 -->
         <el-form-item label="主题切换">
           <el-switch
@@ -52,14 +59,14 @@ onMounted(()=>{
 
         <!-- 头像修改 -->
         <el-form-item >
-          <el-upload><!-- 头像上传 -->
+          <el-upload
+            class="avatar-uploader"
+            action="#"
+            :show-file-list="false"
+            :on-change="handleAvatarChange"
+          >
             <el-avatar :src="avatarUrl" :size="120" class="avatar" />
           </el-upload>
-        </el-form-item>
-
-        <!-- 姓名修改 -->
-        <el-form-item >                                     <!-- clearable叉叉按钮-->
-          <el-input v-model="userName" placeholder="请输入姓名"  class="name-input" clearable/>
         </el-form-item>
 
         <!-- 保存按钮 -->
@@ -68,7 +75,6 @@ onMounted(()=>{
             保存设置
           </el-button>
         </el-form-item>
-        
       </el-form>
     </div>
   </div>
@@ -96,6 +102,12 @@ onMounted(()=>{
   padding:30px;
   box-shadow: 0 5px 20px rgba(19, 16, 16, 0.15);
   margin : 0 auto;
+}
+
+.avatar-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .avatar {

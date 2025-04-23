@@ -12,6 +12,8 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: Home,
+      // 重定向到chat
+      redirect: '/chat',
       children: [
         {
           path: '/setting',
